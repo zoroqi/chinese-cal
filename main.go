@@ -12,7 +12,10 @@ import (
 
 func main() {
 	three := flag.Bool("3", false, "")
+	y := flag.Int("year", 0, "year")
+	m := flag.Int("month", 0, "month")
 	flag.Parse()
+
 	print := func(t time.Time) {
 		lines := layout(month(t))
 		for _, s := range lines {
@@ -20,7 +23,18 @@ func main() {
 		}
 		fmt.Println()
 	}
+
 	now := time.Now()
+	if *y != 0 {
+		if *y > 0 || *y < 10000 {
+			now = now.AddDate(*y-now.Year(), 0, 0)
+		}
+	}
+	if *m != 0 {
+		if *m > 0 || *m < 13 {
+			now = now.AddDate(0, *m-int(now.Month()), 0)
+		}
+	}
 	if *three {
 		print(firstDay(now).AddDate(0, -1, 0))
 	}
@@ -37,6 +51,7 @@ func firstDay(t time.Time) time.Time {
 var week = []string{"日", "一", "二", "三", "四", "五", "六"}
 
 const width = 56
+const blockWidth = 8
 
 var space = strings.Repeat(" ", width)
 
@@ -52,8 +67,8 @@ func layout(m []day) []string {
 	nsb := strings.Builder{}
 
 	if m[0].Weekday() != 0 {
-		nsb.WriteString(space[:m[0].Weekday()*8])
-		csb.WriteString(space[:m[0].Weekday()*8])
+		nsb.WriteString(space[:m[0].Weekday()*blockWidth])
+		csb.WriteString(space[:m[0].Weekday()*blockWidth])
 	}
 
 	for _, d := range m {
@@ -109,17 +124,17 @@ type day struct {
 }
 
 func (d day) nString() string {
-	return block(strconv.Itoa(d.Day()), 8, d.today)
+	return block(strconv.Itoa(d.Day()), blockWidth, d.today)
 }
 
 func (d day) cString() string {
 	s := ""
-	if d.lunar.GetJie() != "" {
-		s = d.lunar.GetJie()
+	if d.lunar.GetJieQi() != "" {
+		s = d.lunar.GetJieQi()
 	} else {
 		s = d.lunar.GetMonthInChinese() + d.lunar.GetDayInChinese()
 	}
-	return block(s, 8, d.today)
+	return block(s, blockWidth, d.today)
 }
 
 func isToday(t time.Time) bool {
