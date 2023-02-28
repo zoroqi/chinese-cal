@@ -26,12 +26,12 @@ func main() {
 
 	now := time.Now()
 	if *y != 0 {
-		if *y > 0 || *y < 10000 {
+		if *y > 0 && *y < 10000 {
 			now = now.AddDate(*y-now.Year(), 0, 0)
 		}
 	}
 	if *m != 0 {
-		if *m > 0 || *m < 13 {
+		if *m > 0 && *m < 13 {
 			now = now.AddDate(0, *m-int(now.Month()), 0)
 		}
 	}
@@ -50,8 +50,8 @@ func firstDay(t time.Time) time.Time {
 
 var week = []string{"日", "一", "二", "三", "四", "五", "六"}
 
-const width = 56
 const blockWidth = 8
+const width = blockWidth*7
 
 var space = strings.Repeat(" ", width)
 
@@ -62,7 +62,7 @@ func layout(m []day) []string {
 	lines := []string{}
 	// 26 2 2 4 26
 	lines = append(lines, block(fmt.Sprintf("%02d  %d", m[0].Month(), m[0].Year()), width, false))
-	lines = append(lines, block(strings.Join(week, space[:6]), width, false))
+	lines = append(lines, block(strings.Join(week, space[:blockWidth-2]), width, false))
 	csb := strings.Builder{}
 	nsb := strings.Builder{}
 
