@@ -13,4 +13,4 @@
 我使用的是 [InconsolataGo](https://www.levien.com/type/myfonts/inconsolata.html) 这个字体.
 也可以使用 [霞鹜文楷](https://github.com/lxgw/LxgwWenKai) .
 
-安装后添加 `alias ,cal = chinese_cal` 就可以方用了,
+安装后添加 `alias ,cal = chinese_cal` 就可以方便使用了,
