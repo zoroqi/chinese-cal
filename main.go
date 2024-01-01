@@ -27,7 +27,12 @@ func main() {
 	now := time.Now()
 	if *y != 0 {
 		if *y > 0 && *y < 10000 {
+			tm := now.Month()
+			// 2024-02-29 + 1 year = 2025-02-29(2025-03-01), 而我期望的是 2025-02-28
 			now = now.AddDate(*y-now.Year(), 0, 0)
+			for now.Month() != tm {
+				now = now.AddDate(0, 0, -1)
+			}
 		}
 	}
 	if *m != 0 {
