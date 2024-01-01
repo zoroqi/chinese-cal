@@ -33,6 +33,11 @@ func main() {
 	if *m != 0 {
 		if *m > 0 && *m < 13 {
 			now = now.AddDate(0, *m-int(now.Month()), 0)
+			// 月份不一致, 说明是计算日期偏移到下个月了, 需要调整到指定月份.
+			// 2021-01-31 + 1 month = 2021-02-31(2021-03-03), 而我期望的是 2021-02-28
+			for int(now.Month()) != *m {
+				now = now.AddDate(0, 0, -1)
+			}
 		}
 	}
 	if *three {
@@ -51,7 +56,7 @@ func firstDay(t time.Time) time.Time {
 var week = []string{"日", "一", "二", "三", "四", "五", "六"}
 
 const blockWidth = 8
-const width = blockWidth*7
+const width = blockWidth * 7
 
 var space = strings.Repeat(" ", width)
 
@@ -87,13 +92,6 @@ func layout(m []day) []string {
 	lines = append(lines, csb.String())
 
 	return lines
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 // s 长度不足 length 的时候进行空格填充, 尽量保证 s 是居中的.
