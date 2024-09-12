@@ -1,28 +1,25 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/6tail/lunar-go/calendar"
+	"io/ioutil"
 	"math"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/6tail/lunar-go/calendar"
 )
 
 func main() {
 	three := flag.Bool("3", false, "")
 	y := flag.Int("year", 0, "year")
 	m := flag.Int("month", 0, "month")
+	h := flag.Bool("h", false, "show holiday information")
 	flag.Parse()
-
-	print := func(t time.Time) {
-		lines := layout(month(t))
-		for _, s := range lines {
-			fmt.Println(s)
-		}
-		fmt.Println()
-	}
 
 	now := time.Now()
 	if *y != 0 {
@@ -45,6 +42,25 @@ func main() {
 			}
 		}
 	}
+
+	holidays := make(map[string]HolidayInfo)
+	var err error
+	if *h {
+		holidays, err = fetchHolidays(now.Year())
+		if err != nil {
+			fmt.Println("Error fetching holiday data:", err)
+			holidays = make(map[string]HolidayInfo) // 使用空map以防获取失败
+		}
+	}
+
+	print := func(t time.Time) {
+		lines := layout(month(t, holidays, *h))
+		for _, s := range lines {
+			fmt.Println(s)
+		}
+		fmt.Println()
+	}
+
 	if *three {
 		print(firstDay(now).AddDate(0, -1, 0))
 	}
@@ -90,8 +106,16 @@ func layout(m []day) []string {
 			csb.Reset()
 			nsb.Reset()
 		}
-		nsb.WriteString(d.nString())
-		csb.WriteString(d.cString())
+		colorF := colorDef
+		if d.holiday != nil {
+			if d.holiday.IsOffDay {
+				colorF = colorGreen
+			} else {
+				colorF = colorRed
+			}
+		}
+		nsb.WriteString(colorF(d.nString()))
+		csb.WriteString(colorF(d.cString()))
 	}
 	lines = append(lines, nsb.String())
 	lines = append(lines, csb.String())
@@ -122,8 +146,9 @@ func block(s string, length int, color bool) string {
 
 type day struct {
 	time.Time
-	lunar *calendar.Lunar
-	today bool
+	lunar   *calendar.Lunar
+	today   bool
+	holiday *HolidayInfo
 }
 
 func (d day) nString() string {
@@ -144,7 +169,7 @@ func isToday(t time.Time) bool {
 	return t.Year() == today.Year() && t.Month() == today.Month() && t.Day() == today.Day()
 }
 
-func month(t time.Time) []day {
+func month(t time.Time, holidays map[string]HolidayInfo, showHolidays bool) []day {
 	first := firstDay(t)
 	lunar := calendar.NewLunarFromDate(first)
 	current := first
@@ -152,15 +177,73 @@ func month(t time.Time) []day {
 
 	cm := current.Month()
 	for cm == current.Month() {
-		days = append(days, day{
+		d := day{
 			Time:  current,
 			today: isToday(current),
 			lunar: lunar,
-		})
-		current.YearDay()
+		}
+
+		if showHolidays {
+			dateStr := current.Format("2006-01-02")
+			if holiday, ok := holidays[dateStr]; ok {
+				d.holiday = &holiday
+			}
+		}
+
+		days = append(days, d)
 		current = current.AddDate(0, 0, 1)
 		lunar = lunar.Next(1)
 	}
 
 	return days
+}
+
+type HolidayInfo struct {
+	Name     string `json:"name"`
+	Date     string `json:"date"`
+	IsOffDay bool   `json:"isOffDay"`
+}
+
+type HolidayData struct {
+	Year int           `json:"year"`
+	Days []HolidayInfo `json:"days"`
+}
+
+// 调用的接口 [NateScarlet/holiday-cn: 中国法定节假日数据](https://github.com/NateScarlet/holiday-cn/)
+func fetchHolidays(year int) (map[string]HolidayInfo, error) {
+	url := fmt.Sprintf("https://raw.githubusercontent.com/NateScarlet/holiday-cn/master/%d.json", year)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var data HolidayData
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	holidays := make(map[string]HolidayInfo)
+	for _, day := range data.Days {
+		holidays[day.Date] = day
+	}
+
+	return holidays, nil
+}
+
+func colorRed(s string) string {
+	return fmt.Sprintf("%c[31m%s%c[0m", 0x1B, s, 0x1B)
+}
+
+func colorGreen(s string) string {
+	return fmt.Sprintf("%c[32m%s%c[0m", 0x1B, s, 0x1B)
+}
+
+func colorDef(s string) string {
+	return fmt.Sprintf("%s", s)
 }
