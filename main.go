@@ -43,13 +43,30 @@ func main() {
 		}
 	}
 
+	showYears := []int{now.Year()}
+	if *three {
+		lastMonth := firstDay(now).AddDate(0, -1, 0)
+		nextMonth := firstDay(now).AddDate(0, 1, 0)
+		if lastMonth.Year() != now.Year() {
+			showYears = append(showYears, lastMonth.Year())
+		}
+		if nextMonth.Year() != now.Year() {
+			showYears = append(showYears, nextMonth.Year())
+		}
+	}
+
 	holidays := make(map[string]HolidayInfo)
-	var err error
 	if *h {
-		holidays, err = fetchHolidays(now.Year())
-		if err != nil {
-			fmt.Println("Error fetching holiday data:", err)
-			holidays = make(map[string]HolidayInfo) // 使用空map以防获取失败
+		for _, year := range showYears {
+			holiday, err := fetchHolidays(year)
+			if err != nil {
+				fmt.Println("Error fetching holiday data:", err)
+				break
+			} else {
+				for k, v := range holiday {
+					holidays[k] = v
+				}
+			}
 		}
 	}
 
